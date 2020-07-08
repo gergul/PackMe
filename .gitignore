@@ -1,0 +1,10 @@
+/Debug/PackMe.exe
+/*.opendb
+/PackMe.VC.db
+/Debug
+/Release
+/x64/Debug
+/PackMe/Debug
+/PackMe/Release
+/PackMe/x64
+/.vs

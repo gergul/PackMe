@@ -256,9 +256,17 @@ void main(int argc, char** argv)
 
 	std::string sOutFile = am.GetArg("o");
 	if (sOutFile.length() < 1)
+	{
+		printf("-o targetFile -f file1 [file2...] -d dir1 [dir2...]\n");
 		return;
+	}
 
-	std::vector<std::string> vctFiles = am.GetArgs("i");
+	bool bBak = false;
+	std::string sBak;
+	if (am.Has(sBak, "bak"))
+		bBak = true;
+
+	std::vector<std::string> vctFiles = am.GetArgs("f");
 	std::vector<std::string> vctDirs = am.GetArgs("d");
 	std::vector<std::string> vctDir;
 	for (int i = 0; i < vctDirs.size(); ++i)
@@ -276,14 +284,15 @@ void main(int argc, char** argv)
 		PackMeNamed pak(sOutFile.c_str(), bRead);
 		if (!bRead)
 		{//write
-			if (pak.CheckID())
+			if (pak.IsPacked())
 			{
 				printf("已经被打包过!\n");
 				return;
 			}
 
 			//备份
-			CopyFileA(sOutFile.c_str(), (sOutFile+".bak").c_str(), FALSE);
+			if (bBak)
+				CopyFileA(sOutFile.c_str(), (sOutFile+".bak").c_str(), FALSE);
 
 			char* fileContent = new char[1024 * 1024 * 10];
 			for (int i = 0; i < vctFiles.size(); ++i)
@@ -324,7 +333,7 @@ void main(int argc, char** argv)
 				char* p = pData;
 				//分离文件名长度
 				long fileNameLen = 0;
-				p = PackMe::GetBaseTypeInData(p, fileNameLen);
+				p = PackMe::GetDataByType(p, fileNameLen);
 				//分离文件名
 				char* fileName = new char[fileNameLen + 1];
 				memcpy(fileName, p, fileNameLen);

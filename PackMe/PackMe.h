@@ -40,16 +40,17 @@ public:
 	virtual void Close();
 
 public:
+	/* 从数据中获得某类型的数据，返回下一个数据的开始位置 */
 	template<typename T>
-	static char* GetBaseTypeInData(const char* pData, T& got)
+	static char* GetDataByType(const char* pData, T& typedData)
 	{
-		got = *((T*)pData);
+		typedData = *((T*)pData);
 		char* p = const_cast<char*>(pData);
 		p = p + sizeof(T);
 		return p;
 	}
 
-	bool CheckID();
+	bool IsPacked();
 
 protected:
 	virtual bool startWrite(const char* pFile);

@@ -68,7 +68,7 @@ bool PackMe::startRead(const char* pFile)
 	do
 	{
 		//检查标识
-		if (!CheckID())
+		if (!IsPacked())
 		{
 			bRet = false;
 			break;
@@ -252,7 +252,7 @@ bool PackMe::endRead()
 	return true;
 }
 
-bool PackMe::CheckID()
+bool PackMe::IsPacked()
 {
 	//跳到标识位置读取处
 	long lenId = strlen(PAK_ID);
