@@ -66,7 +66,7 @@ long PackMeNamed::writeIndexs()
 
 long PackMeNamed::IndexCount()
 {
-	return PackMe::IndexCount() - 1;
+	return PackMe::IndexCount() - 1;//¼õÈ¥Ò»¸önamed¶Î
 }
 
 long PackMeNamed::GetIndexByName(const char* name)
@@ -75,5 +75,20 @@ long PackMeNamed::GetIndexByName(const char* name)
 		return -1;
 
 	return m_mpNameMap[name];
+}
+
+long PackMeNamed::NamedCount()
+{
+	return m_mpNameMap.size();
+}
+
+const char* PackMeNamed::GetName(int idxName)
+{
+	if (idxName >= m_mpNameMap.size())
+		return NULL;
+	std::map<std::string, long>::iterator it = m_mpNameMap.begin();
+	for (int i = 0; i < idxName && it != m_mpNameMap.end(); ++i)
+		++it;
+	return it->first.c_str();
 }
 

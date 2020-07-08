@@ -13,11 +13,15 @@ public:
 	long AddBlock(const char* pData, long sizeData, const char* name);
 
 	long BeginBlock(const char* name);
-
-	virtual long writeIndexs();
-	
+			
 	virtual long IndexCount();
 	long GetIndexByName(const char* name);
+
+	long NamedCount();
+	const char* GetName(int idxName);
+
+protected:
+	virtual long writeIndexs();
 
 private:
 	std::map<std::string, long> m_mpNameMap;

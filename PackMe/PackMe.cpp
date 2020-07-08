@@ -32,7 +32,8 @@ bool PackMe::startWrite(const char* pFile)
 {
 	if ((m_pTargetFile = fopen(pFile, "rb+")) == NULL)
 	{
-		return false;
+		if ((m_pTargetFile = fopen(pFile, "wb+")) == NULL)
+			return false;
 	}
 
 	bool bRet = false;

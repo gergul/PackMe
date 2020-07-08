@@ -257,7 +257,7 @@ void main(int argc, char** argv)
 	std::string sOutFile = am.GetArg("o");
 	if (sOutFile.length() < 1)
 	{
-		printf("-o targetFile -f file1 [file2...] -d dir1 [dir2...]\n");
+		printf("-o targetFile -f file1 [file2...] -d dir1 [dir2...] -t name1 text1 [name2 text2...]\n");
 		return;
 	}
 
@@ -273,8 +273,10 @@ void main(int argc, char** argv)
 	{
 		ListFilesA(vctDirs[i].c_str(), vctDir, vctFiles);
 	}
+
+	std::vector<std::string> vctTexts = am.GetArgs("t");
 	
-	if (vctFiles.size() > 0)
+	if (vctFiles.size() > 0 || vctTexts.size() > 0)
 		bRead = false;
 	else
 		bRead = true;
@@ -300,11 +302,6 @@ void main(int argc, char** argv)
 				const char* pFileName = vctFiles[i].c_str();
 
 				pak.BeginBlock(pFileName);
-				//文件名长度|文件名|文件内容
-				//file name
-				long fileNameLen = strlen(pFileName);
-				pak.AppendBlockData((const char*)&fileNameLen, sizeof(fileNameLen));
-				pak.AppendBlockData(pFileName, fileNameLen);
 				//file content
 				size_t len = 0;
 				if (MyReadFile(pFileName, (char*)fileContent, len) == 0)
@@ -320,45 +317,55 @@ void main(int argc, char** argv)
 				pak.EndBlock();
 			}
 			delete[] fileContent;
+
+			for (int i = 0; i < vctTexts.size(); i += 2)
+			{
+				std::string& name = vctTexts[i];
+				std::string& text = vctTexts[i+1];
+
+				pak.BeginBlock(name.c_str());
+				//file content
+				pak.AppendBlockData(text.c_str(), text.size());
+				pak.EndBlock();
+			}
 		}
 		else
 		{//read
-			long nCount = pak.IndexCount();
+			long nCount = pak.NamedCount();
 			for (int i = 0; i < nCount; ++i)
 			{
+				const char* pName = pak.GetName(i);
+				if (!pName)
+					continue;
+
+				long idx = pak.GetIndexByName(pName);
+
+
 				//读全部内容
-				long len = pak.GetDataLen(i);
+				long len = pak.GetDataLen(idx);
 				char* pData = new char[len];
 				pak.ReadData(i, pData);
 				char* p = pData;
-				//分离文件名长度
-				long fileNameLen = 0;
-				p = PackMe::GetDataByType(p, fileNameLen);
-				//分离文件名
-				char* fileName = new char[fileNameLen + 1];
-				memcpy(fileName, p, fileNameLen);
-				fileName[fileNameLen] = '\0';
-				p = p + fileNameLen;
+				
 				//分离文件夹
-				std::string sDir = GetDirFromPath(fileName);
+				std::string sDir = GetDirFromPath(pName);
 				if (!sDir.empty())
 				{//创建文件夹
 					StringReplaceA(sDir, "/", "\\");
 					CreateMultipleDirectory(sDir.c_str());
 				}
 				//分离文件内容
-				FILE* f = fopen(fileName, "wb+");
+				FILE* f = fopen(pName, "wb+");
 				if (f == NULL)
 				{
-					printf("写入文件失败%s\n", fileName);
+					printf("写入文件失败%s\n", pName);
 					continue;
 				}
-				fwrite(p, len - sizeof(fileNameLen) - fileNameLen, 1, f);
+				fwrite(p, len, 1, f);
 				fclose(f);
 
-				printf("%s\n", fileName);
+				printf("%s\n", pName);
 
-				delete[] fileName;
 				delete[] pData;
 			}
 		}
@@ -367,7 +374,7 @@ void main(int argc, char** argv)
 	}
 	catch (const std::exception& )
 	{
-
+		printf("打开文件失败。\n");
 	}	
 	
 }
