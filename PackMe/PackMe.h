@@ -16,7 +16,7 @@ public:
 	PackMe(const char* pFile, bool bRead);
 	virtual ~PackMe();
 
-	bool SetFile(const char* pFile, bool bRead);
+	virtual bool SetFile(const char* pFile, bool bRead);
 
 public:
 	virtual bool IsValid();

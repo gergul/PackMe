@@ -11,14 +11,7 @@ PackMe::PackMe(const char* pFile, bool bRead)
 	: m_pTargetFile(NULL)
 	, m_bRead(bRead)
 {
-	if (bRead)
-	{
-		startRead(pFile);
-	}
-	else
-	{
-		startWrite(pFile);
-	}
+	SetFile(pFile, bRead);
 }
 
 PackMe::~PackMe()
@@ -30,14 +23,17 @@ bool PackMe::SetFile(const char* pFile, bool bRead)
 {
 	Close();
 
+	bool bSuccess = false;
 	if (bRead)
 	{
-		startRead(pFile);
+		bSuccess = startRead(pFile);
 	}
 	else
 	{
-		startWrite(pFile);
+		bSuccess = startWrite(pFile);
 	}
+
+	return bSuccess;
 }
 
 bool PackMe::IsValid()

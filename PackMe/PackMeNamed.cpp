@@ -1,13 +1,30 @@
 #include "PackMeNamed.h"
 
+PackMeNamed::PackMeNamed()
+{
+
+}
 
 PackMeNamed::PackMeNamed(const char* pFile, bool bRead /*= true*/)
-	: PackMe(pFile, bRead)
+	: PackMe()
 {
+	SetFile(pFile, bRead);
+}
+
+PackMeNamed::~PackMeNamed()
+{
+}
+
+bool PackMeNamed::SetFile(const char* pFile, bool bRead)
+{
+	bool b = PackMe::SetFile(pFile, bRead);
+	if (!b)
+		return b;
+
 	if (bRead && m_vctBlocksPositions.size() > 0)
 	{
 		int len = GetDataLen((int)m_vctBlocksPositions.size() - 1);
-		char* pNamedData = new char[len];		
+		char* pNamedData = new char[len];
 		ReadData((int)m_vctBlocksPositions.size() - 1, pNamedData);
 		char* pData = pNamedData;
 		//读有多少个名
@@ -26,10 +43,8 @@ PackMeNamed::PackMeNamed(const char* pFile, bool bRead /*= true*/)
 		}
 		delete[] pNamedData;
 	}
-}
 
-PackMeNamed::~PackMeNamed()
-{
+	return true;
 }
 
 int PackMeNamed::AddBlock(const char* pData, long sizeData, const char* name)
