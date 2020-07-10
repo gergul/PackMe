@@ -17,11 +17,7 @@ PackMe::PackMe(const char* pFile, bool bRead/*=true*/)
 
 PackMe::~PackMe()
 {
-	if (m_pTargetFile)
-	{
-		fclose(m_pTargetFile);
-		m_pTargetFile = NULL;
-	}
+	Close();
 }
 
 bool PackMe::IsValid()
@@ -245,6 +241,9 @@ long PackMe::writeIndexs()
 
 bool PackMe::endWrite()
 {
+	if (!m_pTargetFile)
+		return false;
+
 	//   ↓posIndexs
 	//...(目录数量:int|段1读取起始位置:long|段2读取起始位置:long)(posIndexs|"PM")
 	long posIndexs = writeIndexs();
@@ -255,20 +254,15 @@ bool PackMe::endWrite()
 	fwrite(&posIndexs, sizeof(posIndexs), 1, m_pTargetFile);
 	//write 标识
 	fwrite(PAK_ID, strlen(PAK_ID), 1, m_pTargetFile);
-
-	//close
-	fclose(m_pTargetFile);
-	m_pTargetFile = NULL;
-
+	
 	return true;
 }
 
 
 bool PackMe::endRead()
 {
-	//close
-	fclose(m_pTargetFile);
-	m_pTargetFile = NULL;
+	if (!m_pTargetFile)
+		return false;
 
 	return true;
 }
