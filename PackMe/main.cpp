@@ -261,11 +261,6 @@ void main(int argc, char** argv)
 		return;
 	}
 
-	bool bBak = false;
-	std::string sBak;
-	if (am.Has(sBak, "bak"))
-		bBak = true;
-
 	std::vector<std::string> vctFiles = am.GetArgs("f");
 	std::vector<std::string> vctDirs = am.GetArgs("d");
 	std::vector<std::string> vctDir;
@@ -281,100 +276,101 @@ void main(int argc, char** argv)
 	else
 		bRead = true;
 
-	try
+	bool bBak = false;
+	std::string sBak;
+	if (am.Has(sBak, "bak") && !bRead)
+		bBak = true;
+
+	PackMeNamed pak(sOutFile.c_str(), bRead);
+	if (!pak.IsValid())
 	{
-		PackMeNamed pak(sOutFile.c_str(), bRead);
-		if (!bRead)
-		{//write
-			if (pak.IsPacked())
-			{
-				printf("已经被打包过!\n");
-				return;
-			}
-
-			//备份
-			if (bBak)
-				CopyFileA(sOutFile.c_str(), (sOutFile+".bak").c_str(), FALSE);
-
-			char* fileContent = new char[1024 * 1024 * 10];
-			for (int i = 0; i < vctFiles.size(); ++i)
-			{
-				const char* pFileName = vctFiles[i].c_str();
-
-				pak.BeginBlock(pFileName);
-				//file content
-				size_t len = 0;
-				if (MyReadFile(pFileName, (char*)fileContent, len) == 0)
-				{
-					printf("读取文件失败%s\n", pFileName);
-				}
-				else
-				{
-					printf("%s\n", pFileName);
-				}
-				pak.AppendBlockData(fileContent, len);
-
-				pak.EndBlock();
-			}
-			delete[] fileContent;
-
-			for (int i = 0; i < vctTexts.size(); i += 2)
-			{
-				std::string& name = vctTexts[i];
-				std::string& text = vctTexts[i+1];
-
-				pak.BeginBlock(name.c_str());
-				//file content
-				pak.AppendBlockData(text.c_str(), text.size());
-				pak.EndBlock();
-			}
-		}
-		else
-		{//read
-			long nCount = pak.NamedCount();
-			for (int i = 0; i < nCount; ++i)
-			{
-				const char* pName = pak.GetName(i);
-				if (!pName)
-					continue;
-
-				long idx = pak.GetIndexByName(pName);
-
-
-				//读全部内容
-				long len = pak.GetDataLen(idx);
-				char* pData = new char[len];
-				pak.ReadData(i, pData);
-				char* p = pData;
-				
-				//分离文件夹
-				std::string sDir = GetDirFromPath(pName);
-				if (!sDir.empty())
-				{//创建文件夹
-					StringReplaceA(sDir, "/", "\\");
-					CreateMultipleDirectory(sDir.c_str());
-				}
-				//分离文件内容
-				FILE* f = fopen(pName, "wb+");
-				if (f == NULL)
-				{
-					printf("写入文件失败%s\n", pName);
-					continue;
-				}
-				fwrite(p, len, 1, f);
-				fclose(f);
-
-				printf("%s\n", pName);
-
-				delete[] pData;
-			}
-		}
-
-		pak.Close();
+		printf("打开目标文件失败。\n");
+		return;
 	}
-	catch (const std::exception& )
-	{
-		printf("打开文件失败。\n");
-	}	
+
+	if (!bRead)
+	{//write
+		if (pak.IsPacked())
+		{
+			printf("已经被打包过!\n");
+			return;
+		}
+
+		//备份
+		if (bBak)
+			CopyFileA(sOutFile.c_str(), (sOutFile + ".bak").c_str(), FALSE);
+
+		char* fileContent = new char[1024 * 1024 * 10];
+		for (int i = 0; i < vctFiles.size(); ++i)
+		{
+			const char* pFileName = vctFiles[i].c_str();
+
+			pak.BeginBlock(pFileName);
+
+			//file content
+			size_t len = 0;
+			if (MyReadFile(pFileName, (char*)fileContent, len) == 0)
+			{
+				printf("读取文件失败%s\n", pFileName);
+			}
+			else
+			{
+				printf("%s\n", pFileName);
+			}
+			pak.AppendBlockData(fileContent, len);
+
+			pak.EndBlock();
+		}
+		delete[] fileContent;
+
+		for (int i = 0; i < vctTexts.size(); i += 2)
+		{
+			std::string& name = vctTexts[i];
+			std::string& text = vctTexts[i + 1];
+
+			pak.BeginBlock(name.c_str());
+			//file content
+			pak.AppendBlockData(text.c_str(), text.size());
+			pak.EndBlock();
+		}
+	}
+	else
+	{//read
+		int nCount = pak.NamedCount();
+		for (int i = 0; i < nCount; ++i)
+		{
+			const char* pName = pak.GetName(i);
+			if (!pName)
+				continue;
+
+			//读全部内容
+			long len = pak.GetNamedDataLen(pName);
+			char* pData = new char[len];
+			pak.ReadData(i, pData);
+			char* p = pData;
+
+			//分离文件夹
+			std::string sDir = GetDirFromPath(pName);
+			if (!sDir.empty())
+			{//创建文件夹
+				StringReplaceA(sDir, "/", "\\");
+				CreateMultipleDirectory(sDir.c_str());
+			}
+			//分离文件内容
+			FILE* f = fopen(pName, "wb+");
+			if (f == NULL)
+			{
+				printf("写入文件失败%s\n", pName);
+				continue;
+			}
+			fwrite(p, len, 1, f);
+			fclose(f);
+			delete[] pData;
+
+			printf("%s\n", pName);
+		}
+	}
+
+	pak.Close();
 	
 }

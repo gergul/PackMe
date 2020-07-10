@@ -10,20 +10,24 @@ public:
 	PackMeNamed(const char* pFile, bool bRead = true);
 	virtual ~PackMeNamed();
 
-	long AddBlock(const char* pData, long sizeData, const char* name);
+	virtual int AddBlock(const char* pData, long sizeData, const char* name);
+	virtual int BeginBlock(const char* name);
 
-	long BeginBlock(const char* name);
-			
-	virtual long IndexCount();
-	long GetIndexByName(const char* name);
+	virtual int IndexCount() override;
 
-	long NamedCount();
-	const char* GetName(int idxName);
+public:
+	virtual int GetIndexByName(const char* name);
+
+	virtual int NamedCount();
+	virtual const char* GetName(int idxName);
+	
+	virtual long GetNamedDataLen(const char* name);	
+	virtual long ReadNamedData(const char* name, char* pData);
 
 protected:
 	virtual long writeIndexs();
 
 private:
-	std::map<std::string, long> m_mpNameMap;
+	std::map<std::string, int> m_mpNameMap;
 };
 

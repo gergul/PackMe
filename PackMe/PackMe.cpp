@@ -5,18 +5,14 @@ PackMe::PackMe(const char* pFile, bool bRead/*=true*/)
 	: m_pTargetFile(NULL)
 	, m_bRead(bRead)
 {
-	bool bSucess = false;
 	if (bRead)
 	{
-		bSucess = startRead(pFile);
+		startRead(pFile);
 	}
 	else
 	{
-		bSucess = startWrite(pFile);
+		startWrite(pFile);
 	}
-
-	if (!bSucess)
-		throw std::exception("FAIL_OPEN_FILE");
 }
 
 PackMe::~PackMe()
@@ -26,6 +22,11 @@ PackMe::~PackMe()
 		fclose(m_pTargetFile);
 		m_pTargetFile = NULL;
 	}
+}
+
+bool PackMe::IsValid()
+{
+	return m_pTargetFile;
 }
 
 bool PackMe::startWrite(const char* pFile)
@@ -76,7 +77,8 @@ bool PackMe::startRead(const char* pFile)
 		}
 
 		//跳到目录位置读取处
-		//.................................|目录位置|ID.
+		//                                 ↓
+		//.................................|目录位置:long|ID.
 		if (fseek(m_pTargetFile, -(strlen(PAK_ID) + sizeof(long)), SEEK_END) < 0)
 		{
 			bRet = false;
@@ -95,14 +97,14 @@ bool PackMe::startRead(const char* pFile)
 		//跳到目录位置读取处
 		fseek(m_pTargetFile, posIndexs, SEEK_SET);
 		//读取目录数
-		long indexsCount = -1;
+		int indexsCount = -1;
 		fread(&indexsCount, sizeof(indexsCount), 1, m_pTargetFile);
 		//读取目录项
 		for (int i = 0; i < indexsCount; ++i)
 		{
 			long pos = -1;
 			fread(&pos, sizeof(pos), 1, m_pTargetFile);
-			m_vctIndexs.push_back(pos);
+			m_vctBlocksPositions.push_back(pos);
 		}
 
 		bRet = true;
@@ -117,31 +119,33 @@ bool PackMe::startRead(const char* pFile)
 	return bRet;
 }
 
-long PackMe::AddBlock(const char* pData, long sizeData)
+int PackMe::AddBlock(const char* pData, long sizeData)
 {
 	//跳到文件尾以添加数据
 	fseek(m_pTargetFile, 0, SEEK_END);
-	m_vctIndexs.push_back(ftell(m_pTargetFile));
+	m_vctBlocksPositions.push_back(ftell(m_pTargetFile));
 
 	//写大小
 	fwrite(&sizeData, sizeof(sizeData), 1, m_pTargetFile);
 	//写内容
 	fwrite(pData, sizeData, 1, m_pTargetFile);
 
-	return m_vctIndexs[m_vctIndexs.size() - 1];
+	return m_vctBlocksPositions.size() - 1;
 }
 
-long PackMe::BeginBlock()
+//            ↓(m_vctIndexs最后一个元素)
+//(原文件内容)|块大小(long)|块内容....|PM
+int PackMe::BeginBlock()
 {
 	//跳到文件尾以添加数据
 	fseek(m_pTargetFile, 0, SEEK_END);
-	m_vctIndexs.push_back(ftell(m_pTargetFile));
+	m_vctBlocksPositions.push_back(ftell(m_pTargetFile));
 
-	//写大小的预留位置
+	//写大小的预留位置，此位置在EndBlock时回填
 	long sizeData = 0;
 	fwrite(&sizeData, sizeof(sizeData), 1, m_pTargetFile);
 
-	return m_vctIndexs[m_vctIndexs.size() - 1];
+	return m_vctBlocksPositions.size() - 1;
 }
 
 long PackMe::AppendBlockData(const char* pData, long sizeData)
@@ -153,24 +157,37 @@ long PackMe::AppendBlockData(const char* pData, long sizeData)
 
 long PackMe::EndBlock()
 {
-	long blockLen = ftell(m_pTargetFile) - m_vctIndexs[m_vctIndexs.size() - 1] - sizeof(long);
-	fseek(m_pTargetFile, m_vctIndexs[m_vctIndexs.size() - 1], SEEK_SET);
-	fwrite(&blockLen, sizeof(blockLen), 1, m_pTargetFile);
+	//回到块大小位置，填写块大小数据
+	long blockDataLen = (ftell(m_pTargetFile) - m_vctBlocksPositions[m_vctBlocksPositions.size() - 1]) - sizeof(blockDataLen);
+	fseek(m_pTargetFile, m_vctBlocksPositions[m_vctBlocksPositions.size() - 1], SEEK_SET);
+	fwrite(&blockDataLen, sizeof(blockDataLen), 1, m_pTargetFile);
 
 	return ftell(m_pTargetFile);
 }
 
-long PackMe::IndexCount()
+int PackMe::IndexCount()
 {
-	return m_vctIndexs.size();
+	return (int)m_vctBlocksPositions.size();
+}
+
+int PackMe::FirstIndex()
+{
+	return IndexCount() - 1;
+}
+
+int PackMe::LastIndex()
+{
+	if (m_vctBlocksPositions.size() == 0)
+		return -1;
+	return (IndexCount() - 1);
 }
 
 long PackMe::GetDataLen(int idx)
 {
-	if (idx >= m_vctIndexs.size())
+	if (idx >= (int)m_vctBlocksPositions.size())
 		return -1;
 
-	fseek(m_pTargetFile, m_vctIndexs[idx], SEEK_SET);
+	fseek(m_pTargetFile, m_vctBlocksPositions[idx], SEEK_SET);
 
 	long sizeChunk = -1;
 	fread(&sizeChunk, sizeof(sizeChunk), 1, m_pTargetFile);
@@ -179,10 +196,10 @@ long PackMe::GetDataLen(int idx)
 
 long PackMe::ReadData(int idx, char* pData)
 {
-	if (idx >= m_vctIndexs.size())
+	if (idx >= (int)m_vctBlocksPositions.size())
 		return -1;
 
-	fseek(m_pTargetFile, m_vctIndexs[idx], SEEK_SET);
+	fseek(m_pTargetFile, m_vctBlocksPositions[idx], SEEK_SET);
 	long nDataSize = GetDataLen(idx);//cur seeked
 	fread(pData, nDataSize, 1, m_pTargetFile);
 
@@ -209,24 +226,27 @@ void PackMe::Close()
 
 long PackMe::writeIndexs()
 {
+	//   ↓posIndexs
+	//...(目录数量:int|段1读取起始位置:long|段2读取起始位置:long))
 	fseek(m_pTargetFile, 0, SEEK_END);
 	long posIndexs = ftell(m_pTargetFile);
 
 	//写大小
-	long idxCount = m_vctIndexs.size();
+	int idxCount = (int)m_vctBlocksPositions.size();
 	fwrite(&idxCount, sizeof(idxCount), 1, m_pTargetFile);
 	//写列表
-	for (int i = 0; i < m_vctIndexs.size(); ++i)
+	for (int i = 0; i < m_vctBlocksPositions.size(); ++i)
 	{
-		fwrite(&m_vctIndexs[i], sizeof(m_vctIndexs[i]), 1, m_pTargetFile);
+		fwrite(&m_vctBlocksPositions[i], sizeof(m_vctBlocksPositions[i]), 1, m_pTargetFile);
 	}
-
 
 	return posIndexs;
 }
 
 bool PackMe::endWrite()
 {
+	//   ↓posIndexs
+	//...(目录数量:int|段1读取起始位置:long|段2读取起始位置:long)(posIndexs|"PM")
 	long posIndexs = writeIndexs();
 
 	//到最后写结束标识
@@ -256,7 +276,7 @@ bool PackMe::endRead()
 bool PackMe::IsPacked()
 {
 	//跳到标识位置读取处
-	long lenId = strlen(PAK_ID);
+	int lenId = strlen(PAK_ID);
 	if (fseek(m_pTargetFile, -lenId, SEEK_END) < 0)
 	{
 		return false;

@@ -4,7 +4,7 @@
 
 /*
 	存储格式：
-	(原文件内容...)(段1长度:long|段1内容...)(段2长度:long|段2内容...)(目录数量:long|段1读取起始位置:long|段2读取起始位置:long)(目录读取起始位置:long|"PM")
+	(原文件内容...)(段1长度:long|段1内容...)(段2长度:long|段2内容...)(目录数量:int|段1读取起始位置:long|段2读取起始位置:long)(目录读取起始位置:long|"PM")
 */
 
 #define PAK_ID "PM"
@@ -16,12 +16,16 @@ public:
 	virtual ~PackMe();
 
 public:
+	bool IsValid();
+	bool IsPacked();
+
+public:
 	//增加一个块
-	virtual long AddBlock(const char* pData, long sizeData);
+	virtual int AddBlock(const char* pData, long sizeData);
 	
 public:
 	//开始写一个块
-	virtual long BeginBlock();
+	virtual int BeginBlock();
 	//增加块内容
 	virtual long AppendBlockData(const char* pData, long sizeData);
 	//结束写一个块
@@ -29,7 +33,9 @@ public:
 
 public:
 	//索引数
-	virtual long IndexCount();
+	virtual int IndexCount();
+	virtual int FirstIndex();
+	virtual int LastIndex();
 	//获得块的长度
 	virtual long GetDataLen(int idx);
 	//读取块内容
@@ -49,9 +55,7 @@ public:
 		p = p + sizeof(T);
 		return p;
 	}
-
-	bool IsPacked();
-
+		
 protected:
 	virtual bool startWrite(const char* pFile);
 	virtual bool startRead(const char* pFile);
@@ -66,6 +70,6 @@ protected:
 	FILE* m_pTargetFile;
 	bool  m_bRead;
 
-	std::vector<long> m_vctIndexs;
+	std::vector<long> m_vctBlocksPositions;
 };
 
