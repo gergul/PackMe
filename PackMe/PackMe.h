@@ -12,12 +12,15 @@
 class PackMe
 {
 public:
-	PackMe(const char* pFile, bool bRead=true);
+	PackMe();
+	PackMe(const char* pFile, bool bRead);
 	virtual ~PackMe();
 
+	bool SetFile(const char* pFile, bool bRead);
+
 public:
-	bool IsValid();
-	bool IsPacked();
+	virtual bool IsValid();
+	virtual bool IsPacked();
 
 public:
 	//增加一个块

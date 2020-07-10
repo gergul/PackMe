@@ -1,7 +1,13 @@
 #include "PackMe.h"
 
+PackMe::PackMe()
+	: m_pTargetFile(NULL)
+	, m_bRead(true)
+{
 
-PackMe::PackMe(const char* pFile, bool bRead/*=true*/)
+}
+
+PackMe::PackMe(const char* pFile, bool bRead)
 	: m_pTargetFile(NULL)
 	, m_bRead(bRead)
 {
@@ -18,6 +24,20 @@ PackMe::PackMe(const char* pFile, bool bRead/*=true*/)
 PackMe::~PackMe()
 {
 	Close();
+}
+
+bool PackMe::SetFile(const char* pFile, bool bRead)
+{
+	Close();
+
+	if (bRead)
+	{
+		startRead(pFile);
+	}
+	else
+	{
+		startWrite(pFile);
+	}
 }
 
 bool PackMe::IsValid()
