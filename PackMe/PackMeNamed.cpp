@@ -130,6 +130,9 @@ long PackMeNamed::ReadNamedData(const char* name, char* pData)
 std::string PackMeNamed::ReadNamedString(const std::string& name)
 {
 	long len = GetNamedDataLen(name.c_str());
+	if (len <= 0)
+		return "";
+
 	char* pData = new char[len + 1];
 	len = ReadNamedData(name.c_str(), pData);
 	pData[len] = '\0';
