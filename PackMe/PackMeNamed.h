@@ -26,6 +26,7 @@ public:
 	
 	virtual long GetNamedDataLen(const char* name);	
 	virtual long ReadNamedData(const char* name, char* pData);
+	virtual std::string ReadNamedString(const std::string& name);
 
 protected:
 	virtual long writeIndexs();
