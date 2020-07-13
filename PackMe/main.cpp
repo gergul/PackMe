@@ -183,11 +183,11 @@ bool StringReplaceA(std::string& strBase, const std::string& strSrc, const std::
 
 	return b;
 }
-
-size_t MyReadFile(const char * path, char* outContent, size_t & in_outLen, size_t start=0)
+size_t ReadFile(const char* path, std::vector<char>& data, size_t start = 0)
 {
 	FILE *f = NULL;
 	long sz;
+	size_t nToRead = 0;
 	size_t nFileSize = 0;
 
 	if (!path)
@@ -214,32 +214,32 @@ size_t MyReadFile(const char * path, char* outContent, size_t & in_outLen, size_
 			break;
 		}
 		nFileSize = (size_t)sz;
+		if (start >= nFileSize)
+		{
+			break;
+		}
 
 		if (fseek(f, start, SEEK_SET) < 0)
 		{
 			break;
 		}
 
-		size_t nToRead = in_outLen;
-		if (nToRead == 0)
-		{
-			nToRead = (size_t)sz;
-		}
+		nToRead = nFileSize - start;
+		data.resize(nToRead);
 
-		size_t nReaded = fread(outContent, 1, nToRead, f);
+		size_t nReaded = fread(data.data(), 1, nToRead, f);
 		if (nReaded > nToRead)
 		{
+			nToRead = nReaded;
 			break;
 		}
-
-		in_outLen = nReaded;
-
 	} while (0);
 
 	fclose(f);
 
 	return nFileSize;
 }
+
 
 
 void main(int argc, char** argv)
@@ -300,7 +300,6 @@ void main(int argc, char** argv)
 		if (bBak)
 			CopyFileA(sOutFile.c_str(), (sOutFile + ".bak").c_str(), FALSE);
 
-		char* fileContent = new char[1024 * 1024 * 10];
 		for (int i = 0; i < vctFiles.size(); ++i)
 		{
 			const char* pFileName = vctFiles[i].c_str();
@@ -308,8 +307,9 @@ void main(int argc, char** argv)
 			pak.BeginBlock(pFileName);
 
 			//file content
-			size_t len = 0;
-			if (MyReadFile(pFileName, (char*)fileContent, len) == 0)
+			std::vector<char> data;
+			ReadFile(pFileName, data);
+			if (data.size() == 0)
 			{
 				printf("读取文件失败%s\n", pFileName);
 			}
@@ -317,11 +317,10 @@ void main(int argc, char** argv)
 			{
 				printf("%s\n", pFileName);
 			}
-			pak.AppendBlockData(fileContent, len);
+			pak.AppendBlockData(data.data(), data.size());
 
 			pak.EndBlock();
 		}
-		delete[] fileContent;
 
 		for (int i = 0; i < vctTexts.size(); i += 2)
 		{
@@ -344,10 +343,9 @@ void main(int argc, char** argv)
 				continue;
 
 			//读全部内容
-			long len = pak.GetNamedDataLen(pName);
-			char* pData = new char[len];
-			pak.ReadData(i, pData);
-			char* p = pData;
+			std::vector<char> data;
+			if (!pak.ReadNamedData(pName, data))
+				continue;
 
 			//分离文件夹
 			std::string sDir = GetDirFromPath(pName);
@@ -363,9 +361,8 @@ void main(int argc, char** argv)
 				printf("写入文件失败%s\n", pName);
 				continue;
 			}
-			fwrite(p, len, 1, f);
+			fwrite(data.data(), data.size(), 1, f);
 			fclose(f);
-			delete[] pData;
 
 			printf("%s\n", pName);
 		}

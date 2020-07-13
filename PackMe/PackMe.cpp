@@ -21,7 +21,13 @@ PackMe::~PackMe()
 
 bool PackMe::SetFile(const char* pFile, bool bRead)
 {
-	Close();
+	if (m_pTargetFile)
+	{
+		fclose(m_pTargetFile);
+		m_pTargetFile = NULL;
+	}
+
+	m_bRead = bRead;
 
 	bool bSuccess = false;
 	if (bRead)
@@ -216,6 +222,19 @@ long PackMe::ReadData(int idx, char* pData)
 	fread(pData, nDataSize, 1, m_pTargetFile);
 
 	return nDataSize;
+}
+
+bool PackMe::ReadData(int idx, std::vector<char>& data)
+{
+	if (idx >= (int)m_vctBlocksPositions.size())
+		return false;
+
+	fseek(m_pTargetFile, m_vctBlocksPositions[idx], SEEK_SET);
+	long nDataSize = GetDataLen(idx);//cur seeked
+	data.resize(nDataSize);
+	fread(data.data(), nDataSize, 1, m_pTargetFile);
+
+	return true;
 }
 
 void PackMe::Close()

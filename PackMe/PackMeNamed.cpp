@@ -127,6 +127,15 @@ long PackMeNamed::ReadNamedData(const char* name, char* pData)
 	return ReadData(idx, pData);
 }
 
+bool PackMeNamed::ReadNamedData(const char* name, std::vector<char>& data)
+{
+	int idx = GetIndexByName(name);
+	if (idx < 0)
+		return false;
+
+	return ReadData(idx, data);
+}
+
 std::string PackMeNamed::ReadNamedString(const std::string& name)
 {
 	long len = GetNamedDataLen(name.c_str());

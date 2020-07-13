@@ -43,7 +43,9 @@ public:
 	virtual long GetDataLen(int idx);
 	//读取块内容
 	virtual long ReadData(int idx, char* pData);
-	
+	//读取内容简易接口
+	virtual bool ReadData(int idx, std::vector<char>& data);
+
 public:
 	//关闭
 	virtual void Close();
